@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Poker Night Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #f0fdf4;
+    color: #1a2e1a;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    padding: 1.25rem;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  .header { text-align: center; margin-bottom: 2rem; }
+  .header h1 { font-size: 2rem; font-weight: 900; color: #15803d; letter-spacing: -1px; }
+  .header p { color: #6b7280; font-size: 0.85rem; margin-top: 2px; }
+  .btn-new {
+    margin-top: 0.75rem; background: #fef2f2; color: #dc2626;
+    border: 1px solid #fecaca; border-radius: 8px;
+    padding: 6px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+
+  .card {
+    background: white; border: 1px solid #d1fae5; border-radius: 16px;
+    padding: 1.25rem; margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(21,128,61,0.06);
+  }
+  .card-title {
+    font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1.5px; color: #15803d; margin-bottom: 1rem;
+  }
+
+  /* Chips */
+  .chips-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .chip-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    border-radius: 20px; padding: 5px 12px; font-size: 13px; font-weight: 500;
+  }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+
+  /* Players */
+  .player {
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    border-radius: 12px; padding: 0.9rem 1rem; margin-bottom: 0.6rem;
+    transition: border-color 0.15s;
+  }
+  .player.editing { border-color: #15803d; }
+  .player-top { display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem; min-height: 32px; }
+  .player-name { font-weight: 700; font-size: 1rem; flex: 1; }
+  .player-name-input {
+    font-weight: 700; font-size: 1rem; flex: 1;
+    background: white; border: 1.5px solid #15803d; border-radius: 8px;
+    padding: 3px 8px; color: #1a2e1a; outline: none; display: none;
+  }
+  .btn-icon {
+    background: none; border: none; cursor: pointer;
+    font-size: 15px; color: #6b7280; padding: 3px 5px;
+    border-radius: 6px; line-height: 1; flex-shrink: 0;
+  }
+  .btn-icon:hover { background: #dcfce7; color: #15803d; }
+  .btn-icon.danger:hover { background: #fef2f2; color: #dc2626; }
+  .save-btn, .cancel-edit-btn { display: none; }
+  .save-btn {
+    background: #15803d; color: white; border: none;
+    border-radius: 8px; padding: 4px 12px; font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+  }
+  .cancel-edit-btn {
+    background: none; color: #6b7280; border: 1px solid #d1fae5;
+    border-radius: 8px; padding: 4px 10px; font-size: 13px; cursor: pointer; flex-shrink: 0;
+  }
+  .player-meta { margin-bottom: 0.5rem; }
+  .player-in { font-size: 0.88rem; color: #6b7280; }
+  .player-in strong { color: #1a2e1a; font-weight: 800; }
+  .pills { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 0.5rem; }
+  .pill-buyin {
+    background: white; border: 1px solid #d1fae5; border-radius: 20px;
+    padding: 2px 10px; font-size: 12px; color: #15803d; font-weight: 600;
+  }
+  .btn-sm {
+    background: #dcfce7; color: #15803d; border: none;
+    border-radius: 8px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .btn-sm.primary { background: #15803d; color: white; }
+
+  /* Inline money form */
+  .money-form {
+    display: none; margin-top: 0.6rem;
+    background: white; border: 1px solid #bbf7d0; border-radius: 10px; padding: 0.75rem;
+  }
+  .money-form label { font-size: 11px; font-weight: 700; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 5px; }
+  .money-row { display: flex; gap: 8px; align-items: center; }
+  .money-input {
+    flex: 1; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+    padding: 7px 10px; font-size: 15px; font-weight: 700; outline: none;
+  }
+  .money-input:focus { border-color: #15803d; background: white; }
+  .btn-green-sm {
+    background: #15803d; color: white; border: none;
+    border-radius: 8px; padding: 7px 14px; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .btn-cancel-sm {
+    background: none; color: #6b7280; border: 1px solid #d1fae5;
+    border-radius: 8px; padding: 7px 10px; font-size: 14px; cursor: pointer;
+  }
+
+  /* Add player */
+  .add-player-form {
+    display: none;
+    background: #f0fdf4; border: 1.5px solid #86efac;
+    border-radius: 12px; padding: 0.9rem 1rem; margin-bottom: 0.6rem;
+  }
+  .add-player-form label { font-size: 12px; font-weight: 700; color: #15803d; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .add-player-row { display: flex; gap: 8px; align-items: center; }
+  .add-player-input {
+    flex: 1; background: white; border: 1px solid #bbf7d0; border-radius: 8px;
+    padding: 8px 12px; font-size: 15px; color: #1a2e1a; outline: none;
+  }
+  .add-player-input:focus { border-color: #15803d; }
+  .btn-add-player {
+    background: white; border: 1.5px dashed #86efac; color: #6b7280;
+    border-radius: 12px; padding: 12px; font-size: 14px; cursor: pointer;
+    width: 100%; text-align: center; margin-bottom: 0.6rem;
+  }
+
+  .pot-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #15803d; color: white; border-radius: 10px;
+    padding: 10px 16px; margin-top: 0.75rem;
+  }
+  .pot-label { font-size: 12px; font-weight: 600; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
+  .pot-val { font-size: 1.3rem; font-weight: 900; }
+
+  /* Cash out */
+  .cashout-block { margin-bottom: 0.75rem; }
+  .cashout-name { font-weight: 700; margin-bottom: 0.5rem; font-size: 0.95rem; }
+  .chip-inputs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 0.4rem; }
+  .chip-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .chip-col input {
+    width: 100%; text-align: center;
+    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+    padding: 6px 2px; font-size: 14px; font-weight: 700; color: #1a2e1a; outline: none;
+  }
+  .chip-col input:focus { border-color: #15803d; background: white; }
+  .chip-col .label { font-size: 9px; color: #6b7280; text-align: center; }
+  .chip-value-row {
+    display: flex; justify-content: space-between;
+    font-size: 13px; color: #6b7280;
+    padding: 4px 2px; border-top: 1px solid #d1fae5; margin-top: 2px;
+  }
+  .chip-value-row strong { color: #15803d; }
+  .co-divider { border: none; border-top: 1px solid #d1fae5; margin: 0.75rem 0; }
+
+  .balance-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    border-radius: 10px; padding: 10px 14px; transition: background 0.2s;
+  }
+  .balance-bar.ok { background: #dcfce7; border: 1px solid #86efac; }
+  .balance-bar.off { background: #fef2f2; border: 1px solid #fecaca; }
+  .balance-status { font-weight: 700; font-size: 14px; }
+  .balance-bar.ok .balance-status { color: #15803d; }
+  .balance-bar.off .balance-status { color: #dc2626; }
+  .balance-detail { font-size: 12px; color: #6b7280; }
+
+  /* Results */
+  .result-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid #f0fdf4; font-size: 0.95rem;
+  }
+  .result-name { font-weight: 600; }
+  .pos { font-weight: 800; color: #15803d; font-size: 1.05rem; }
+  .neg { font-weight: 800; color: #dc2626; font-size: 1.05rem; }
+  .even-result { font-weight: 800; color: #6b7280; font-size: 1.05rem; }
+  .settle-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin: 0.75rem 0 0.5rem; }
+  .settle-row {
+    display: flex; align-items: center;
+    background: #f0fdf4; border: 1px solid #d1fae5; border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 0.4rem; gap: 8px; font-size: 14px;
+  }
+  .settle-arrow { color: #15803d; font-weight: 900; font-size: 16px; }
+  .settle-amt { margin-left: auto; font-weight: 800; color: #15803d; font-size: 1rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>♠ Poker Night</h1>
+  <p id="save-indicator">Auto-saved</p>
+  <button class="btn-new" onclick="newGame()">New Game</button>
+</div>
+
+<!-- CHIPS -->
+<div class="card">
+  <div class="card-title">Chip Values</div>
+  <div class="chips-list">
+    <div class="chip-pill"><span class="dot" style="background:#e5e7eb;border:1px solid #9ca3af"></span>White — $0.25</div>
+    <div class="chip-pill"><span class="dot" style="background:#ef4444"></span>Red — $0.50</div>
+    <div class="chip-pill"><span class="dot" style="background:#22c55e"></span>Green — $1.00</div>
+    <div class="chip-pill"><span class="dot" style="background:#3b82f6"></span>Blue — $2.00</div>
+    <div class="chip-pill"><span class="dot" style="background:#111827;border:1px solid #6b7280"></span>Black — $5.00</div>
+  </div>
+</div>
+
+<!-- PLAYERS -->
+<div class="card">
+  <div class="card-title">Players &amp; Buy-ins</div>
+  <div id="players-list"></div>
+
+  <div class="add-player-form" id="add-form">
+    <label>New Player Name</label>
+    <div class="add-player-row">
+      <input class="add-player-input" id="add-name-input" type="text" placeholder="Enter name…"
+             onkeydown="if(event.key==='Enter')confirmAdd();if(event.key==='Escape')closeAdd()" />
+      <button class="btn-green-sm" onclick="confirmAdd()">Add</button>
+      <button class="btn-cancel-sm" onclick="closeAdd()">✕</button>
+    </div>
+  </div>
+
+  <button class="btn-add-player" id="add-player-btn" onclick="openAdd()">+ Add Player</button>
+
+  <div class="pot-row">
+    <span class="pot-label">Total Pot</span>
+    <span class="pot-val" id="pot-total">$0.00</span>
+  </div>
+</div>
+
+<!-- CASH OUT -->
+<div class="card">
+  <div class="card-title">Cash Out — Count Chips</div>
+  <div id="cashout-list"></div>
+  <div class="balance-bar off" id="balance-bar">
+    <span class="balance-status" id="balance-status">No chips counted yet</span>
+    <span class="balance-detail" id="balance-detail">$0.00 / $0.00</span>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="card">
+  <div class="card-title">Results</div>
+  <ul id="results-list" style="list-style:none"><li style="color:#9ca3af;font-size:13px;">Add players and count chips to see results.</li></ul>
+  <div class="settle-label">Settlements</div>
+  <ul id="settlements-list" style="list-style:none"></ul>
+</div>
+
+<script>
+const CHIPS = [
+  { name:'White', color:'#e5e7eb', border:'1px solid #9ca3af', value:0.25 },
+  { name:'Red',   color:'#ef4444', border:'none',              value:0.50 },
+  { name:'Green', color:'#22c55e', border:'none',              value:1.00 },
+  { name:'Blue',  color:'#3b82f6', border:'none',              value:2.00 },
+  { name:'Black', color:'#111827', border:'1px solid #6b7280', value:5.00 },
+];
+
+const STORAGE_KEY = 'pokertracker_game';
+let players = [];
+let nextId = 1;
+
+// ── Persistence ────────────────────────────────────────────────────────────
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ players, nextId }));
+  const now = new Date();
+  document.getElementById('save-indicator').textContent =
+    'Saved ' + now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    players = data.players || [];
+    nextId  = data.nextId  || players.length + 1;
+  } catch(e) { /* corrupt storage — start fresh */ }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+const fmt      = n => '$' + Math.abs(n).toFixed(2);
+const totalIn  = p => p.buyins.reduce((a,b)=>a+b, 0);
+const chipVal  = p => p.chips.reduce((s,q,i)=>s+q*CHIPS[i].value, 0);
+const potTotal = () => players.reduce((s,p)=>s+totalIn(p), 0);
+const chipsTotal = () => players.reduce((s,p)=>s+chipVal(p), 0);
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render() {
+  renderPlayers();
+  renderCashout();
+  renderBalance();
+  renderResults();
+  document.getElementById('pot-total').textContent = fmt(potTotal());
+}
+
+function renderPlayers() {
+  document.getElementById('players-list').innerHTML = players.map(p => `
+    <div class="player" id="player-${p.id}">
+      <div class="player-top">
+        <span class="player-name" id="name-label-${p.id}">${p.name}</span>
+        <input class="player-name-input" id="name-input-${p.id}" type="text" value="${p.name}"
+               onkeydown="if(event.key==='Enter')saveName(${p.id});if(event.key==='Escape')cancelEdit(${p.id})" />
+        <button class="btn-icon" id="edit-btn-${p.id}" onclick="startEdit(${p.id})" title="Edit name">✏️</button>
+        <button class="save-btn" id="save-btn-${p.id}" onclick="saveName(${p.id})">Save</button>
+        <button class="cancel-edit-btn" id="cancel-edit-btn-${p.id}" onclick="cancelEdit(${p.id})">✕</button>
+        <button class="btn-icon danger" onclick="removePlayer(${p.id})" title="Remove">✕</button>
+      </div>
+      <div class="player-meta">
+        <span class="player-in">Total in: <strong>${fmt(totalIn(p))}</strong></span>
+      </div>
+      <div class="pills">
+        ${p.buyins.map((b,i)=>`<span class="pill-buyin">${fmt(b)} ${i===0?'buy-in':'rebuy'}</span>`).join('')}
+      </div>
+      ${p.buyins.length === 0
+        ? `<button class="btn-sm primary" onclick="openMoneyForm(${p.id},'buyin')">+ Enter Buy-in</button>`
+        : `<button class="btn-sm" onclick="openMoneyForm(${p.id},'rebuy')">+ Rebuy</button>`
+      }
+      <div class="money-form" id="money-form-${p.id}">
+        <label id="money-form-label-${p.id}">Buy-in Amount ($)</label>
+        <div class="money-row">
+          <input class="money-input" id="money-input-${p.id}" type="number" min="0" step="0.5" placeholder="0.00"
+                 onkeydown="if(event.key==='Enter')confirmMoney(${p.id});if(event.key==='Escape')closeMoneyForm(${p.id})" />
+          <button class="btn-green-sm" onclick="confirmMoney(${p.id})">Add</button>
+          <button class="btn-cancel-sm" onclick="closeMoneyForm(${p.id})">✕</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderCashout() {
+  const list = document.getElementById('cashout-list');
+  if (!players.length) {
+    list.innerHTML = '<p style="color:#9ca3af;font-size:13px;margin-bottom:.75rem;">No players yet.</p>';
+    return;
+  }
+  list.innerHTML = players.map((p,pi) => `
+    <div class="cashout-block" ${pi>0?'style="padding-top:.75rem;border-top:1px solid #d1fae5;"':''}>
+      <div class="cashout-name">${p.name}</div>
+      <div class="chip-inputs">
+        ${CHIPS.map((c,ci)=>`
+          <div class="chip-col">
+            <span class="dot" style="background:${c.color};border:${c.border};"></span>
+            <input type="number" min="0" step="1" value="${p.chips[ci]}"
+                   oninput="updateChip(${p.id},${ci},this.value)" />
+            <div class="label">${c.name}</div>
+          </div>`).join('')}
+      </div>
+      <div class="chip-value-row"><span>Chip total</span><strong id="chip-total-${p.id}">${fmt(chipVal(p))}</strong></div>
+    </div>
+  `).join('');
+}
+
+function renderBalance() {
+  const pot = potTotal(), chips = chipsTotal(), diff = Math.abs(pot - chips);
+  const ok = diff < 0.01;
+  const bar = document.getElementById('balance-bar');
+  bar.className = 'balance-bar ' + (ok ? 'ok' : 'off');
+  document.getElementById('balance-status').textContent = ok
+    ? '✓ All chips accounted for'
+    : `⚠ Off by ${fmt(diff)}`;
+  document.getElementById('balance-detail').textContent = `${fmt(chips)} / ${fmt(pot)}`;
+}
+
+function renderResults() {
+  const rList = document.getElementById('results-list');
+  const sList = document.getElementById('settlements-list');
+  if (!players.length) {
+    rList.innerHTML = '<li style="color:#9ca3af;font-size:13px;">Add players and count chips to see results.</li>';
+    sList.innerHTML = '';
+    return;
+  }
+
+  const nets = players
+    .map(p => ({ name: p.name, net: chipVal(p) - totalIn(p) }))
+    .sort((a,b) => b.net - a.net);
+
+  rList.innerHTML = nets.map(n => `
+    <li class="result-row">
+      <span class="result-name">${n.name}</span>
+      <span class="${n.net > 0.005 ? 'pos' : n.net < -0.005 ? 'neg' : 'even-result'}">
+        ${n.net > 0.005 ? '+' : n.net < -0.005 ? '−' : ''}${fmt(n.net)}
+      </span>
+    </li>`).join('');
+
+  // Debt-minimisation settlement
+  const creds = nets.filter(n => n.net >  0.005).map(n => ({...n}));
+  const debts = nets.filter(n => n.net < -0.005).map(n => ({...n}));
+  const txns = [];
+  let ci = 0, di = 0;
+  while (ci < creds.length && di < debts.length) {
+    const c = creds[ci], d = debts[di];
+    const amt = Math.min(c.net, -d.net);
+    txns.push({ from: d.name, to: c.name, amt });
+    c.net -= amt; d.net += amt;
+    if (c.net <  0.005) ci++;
+    if (d.net > -0.005) di++;
+  }
+
+  sList.innerHTML = txns.length
+    ? txns.map(t => `
+        <li class="settle-row">
+          <span>${t.from}</span>
+          <span class="settle-arrow">→</span>
+          <span>${t.to}</span>
+          <span class="settle-amt">${fmt(t.amt)}</span>
+        </li>`).join('')
+    : '<li style="color:#9ca3af;font-size:13px;padding:4px 0;">No settlements needed.</li>';
+}
+
+// ── Edit name ──────────────────────────────────────────────────────────────
+function startEdit(id) {
+  document.getElementById('name-label-'+id).style.display     = 'none';
+  document.getElementById('edit-btn-'+id).style.display       = 'none';
+  document.getElementById('name-input-'+id).style.display     = 'block';
+  document.getElementById('save-btn-'+id).style.display       = 'inline-block';
+  document.getElementById('cancel-edit-btn-'+id).style.display = 'inline-block';
+  document.getElementById('player-'+id).classList.add('editing');
+  document.getElementById('name-input-'+id).focus();
+}
+function saveName(id) {
+  const val = document.getElementById('name-input-'+id).value.trim();
+  if (!val) return;
+  players.find(p => p.id === id).name = val;
+  save(); render();
+}
+function cancelEdit(id) { render(); }
+
+// ── Money form (buy-in or rebuy) ───────────────────────────────────────────
+function openMoneyForm(id, mode) {
+  document.getElementById('money-form-label-'+id).textContent =
+    mode === 'buyin' ? 'Buy-in Amount ($)' : 'Rebuy Amount ($)';
+  document.getElementById('money-input-'+id).value = '';
+  document.getElementById('money-form-'+id).style.display = 'block';
+  document.getElementById('money-input-'+id).focus();
+}
+function closeMoneyForm(id) {
+  document.getElementById('money-form-'+id).style.display = 'none';
+}
+function confirmMoney(id) {
+  const val = parseFloat(document.getElementById('money-input-'+id).value);
+  if (isNaN(val) || val <= 0) return;
+  players.find(p => p.id === id).buyins.push(val);
+  save(); render();
+}
+
+// ── Add player ─────────────────────────────────────────────────────────────
+function openAdd() {
+  document.getElementById('add-form').style.display       = 'block';
+  document.getElementById('add-player-btn').style.display = 'none';
+  document.getElementById('add-name-input').value = '';
+  document.getElementById('add-name-input').focus();
+}
+function closeAdd() {
+  document.getElementById('add-form').style.display       = 'none';
+  document.getElementById('add-player-btn').style.display = 'block';
+}
+function confirmAdd() {
+  const val = document.getElementById('add-name-input').value.trim();
+  if (!val) return;
+  const id = nextId++;
+  players.push({ id, name: val, buyins: [], chips: [0,0,0,0,0] });
+  save(); closeAdd(); render();
+  openMoneyForm(id, 'buyin');
+}
+
+function removePlayer(id) {
+  players = players.filter(p => p.id !== id);
+  save(); render();
+}
+
+// ── Chip input ─────────────────────────────────────────────────────────────
+function updateChip(id, ci, val) {
+  players.find(p => p.id === id).chips[ci] = Math.max(0, parseInt(val) || 0);
+  save();
+  const p = players.find(p => p.id === id);
+  const el = document.getElementById('chip-total-'+id);
+  if (el) el.textContent = fmt(chipVal(p));
+  renderBalance();
+  renderResults();
+}
+
+// ── New game ───────────────────────────────────────────────────────────────
+function newGame() {
+  if (!confirm('Start a new game? This will clear all players and chip counts.')) return;
+  players = []; nextId = 1;
+  localStorage.removeItem(STORAGE_KEY);
+  render();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+load();
+render();
+</script>
+</body>
+</html>
